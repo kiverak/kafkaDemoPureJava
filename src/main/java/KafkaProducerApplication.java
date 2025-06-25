@@ -31,20 +31,20 @@ public class KafkaProducerApplication {
         // Сериализатор значений
         properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 
-//        createNewTopic(properties, "sandbox",3, (short) 2);
-//        createNewTopic(properties, "audit-events",3, (short) 2);
+        createNewTopic(properties, "sandbox",3, (short) 2);
+        createNewTopic(properties, "audit-events",3, (short) 2);
 
         // ID транзакции общий для кластера
 //        properties.setProperty(ProducerConfig.TRANSACTIONAL_ID_CONFIG, "my-transactional-id");
 
         // Отключение идемпотентности
 //        properties.setProperty(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, Boolean.FALSE.toString());
-        properties.setProperty(ProducerConfig.ACKS_CONFIG, "0");
+//        properties.setProperty(ProducerConfig.ACKS_CONFIG, "0");
 
-//        sendRecords(properties);
+        sendRecords(properties);
 //        sendRecordsWithCallback(properties);
 //        sendRecordsWithTransaction(properties);
-        sendRecordsWithNoIdempotence(properties);
+//        sendRecordsWithNoIdempotence(properties);
     }
 
     private static void sendRecordsWithNoIdempotence(Properties properties) {
