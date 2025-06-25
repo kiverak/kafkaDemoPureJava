@@ -35,11 +35,23 @@ public class KafkaProducerApplication {
 //        createNewTopic(properties, "audit-events",3, (short) 2);
 
         // ID транзакции общий для кластера
-        properties.setProperty(ProducerConfig.TRANSACTIONAL_ID_CONFIG, "my-transactional-id");
+//        properties.setProperty(ProducerConfig.TRANSACTIONAL_ID_CONFIG, "my-transactional-id");
+
+        // Отключение идемпотентности
+//        properties.setProperty(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, Boolean.FALSE.toString());
+        properties.setProperty(ProducerConfig.ACKS_CONFIG, "0");
 
 //        sendRecords(properties);
 //        sendRecordsWithCallback(properties);
-        sendRecordsWithTransaction(properties);
+//        sendRecordsWithTransaction(properties);
+        sendRecordsWithNoIdempotence(properties);
+    }
+
+    private static void sendRecordsWithNoIdempotence(Properties properties) {
+        try (var producer = new KafkaProducer<String, String>(properties)) {
+            producer.send(new ProducerRecord<>("sandbox", "Hello World"),
+                    (md, exception) -> logger.info("Metadata: {}", md));
+        }
     }
 
     private static void sendRecords(Properties properties) throws ExecutionException, InterruptedException {
