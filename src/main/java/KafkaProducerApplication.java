@@ -5,7 +5,6 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.errors.TopicExistsException;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
@@ -35,8 +34,12 @@ public class KafkaProducerApplication {
 //        createNewTopic(properties, "sandbox",3, (short) 2);
 //        createNewTopic(properties, "audit-events",3, (short) 2);
 
+        // ID транзакции общий для кластера
+        properties.setProperty(ProducerConfig.TRANSACTIONAL_ID_CONFIG, "my-transactional-id");
+
 //        sendRecords(properties);
-        sendRecordsWithCollback(properties);
+//        sendRecordsWithCallback(properties);
+        sendRecordsWithTransaction(properties);
     }
 
     private static void sendRecords(Properties properties) throws ExecutionException, InterruptedException {
@@ -51,22 +54,24 @@ public class KafkaProducerApplication {
             logger.info("Metadata: {}", metadata);
             logger.info("====================================================================");
 
-            metadata = producer.send(new ProducerRecord<>("sandbox", 1,"my-key",
+            metadata = producer.send(new ProducerRecord<>("sandbox", 1, "my-key",
                     "Hello World with key and partition")).get();
             logger.info("Metadata: {}", metadata);
             logger.info("====================================================================");
 
-            metadata = producer.send(new ProducerRecord<>("sandbox", 1, System.currentTimeMillis(), "my-key-with-timestamp",
+            metadata = producer.send(new ProducerRecord<>("sandbox", 1, System.currentTimeMillis(),
+                    "my-key-with-timestamp",
                     "Hello World with key and partition and timestamp")).get();
             logger.info("Metadata: {}", metadata);
             logger.info("====================================================================");
 
-            metadata = producer.send(new ProducerRecord<>("sandbox", 1, System.currentTimeMillis(),"my-key-with-timestamp",
+            metadata = producer.send(new ProducerRecord<>("sandbox", 1, System.currentTimeMillis(),
+                    "my-key-with-timestamp",
                     "Hello World with key and partition and timestamp")).get();
             logger.info("Metadata: {}", metadata);
             logger.info("====================================================================");
 
-            metadata = producer.send(new ProducerRecord<>("sandbox", 0,"my-key",
+            metadata = producer.send(new ProducerRecord<>("sandbox", 0, "my-key",
                     "Hello World with key, partition and header",
                     List.of(new RecordHeader("Foo", "Bar".getBytes())))).get();
             logger.info("Metadata: {}", metadata);
@@ -74,17 +79,27 @@ public class KafkaProducerApplication {
         }
     }
 
-    private static void sendRecordsWithCollback(Properties properties) throws ExecutionException, InterruptedException {
+    private static void sendRecordsWithCallback(Properties properties) throws ExecutionException, InterruptedException {
         try (var producer = new KafkaProducer<String, String>(properties)) {
             Future<RecordMetadata> recordMetadataFuture = producer.send(new ProducerRecord<>("sandbox", "Hello World"),
                     (md, exception) -> {
-                        logger.info("Metadata: {}, exception == null: {}", md,  exception == null);
+                        logger.info("Metadata: {}, exception == null: {}", md, exception == null);
                     });
             var metadata = recordMetadataFuture.get();
             logger.info("====================================================================");
             logger.info("Metadata: {}", metadata);
             logger.info("====================================================================");
-            }
+        }
+    }
+
+    private static void sendRecordsWithTransaction(Properties properties) {
+        try (var producer = new KafkaProducer<String, String>(properties)) {
+            producer.initTransactions();
+            producer.beginTransaction();
+            producer.send(new ProducerRecord<>("sandbox", "Hello World tx1"));
+            producer.send(new ProducerRecord<>("sandbox", "Hello World tx2"));
+            producer.commitTransaction();
+        }
     }
 
     private static void createNewTopic(Properties properties, String name, int numPartitions, short replicationFactor) {
@@ -95,7 +110,7 @@ public class KafkaProducerApplication {
             logger.info("Topic created successfully:{}", name);
         } catch (InterruptedException | ExecutionException e) {
             if (e.getMessage().contains("TopicExistsException")) {
-                logger.info("Topic already exists: {}",  name);
+                logger.info("Topic already exists: {}", name);
             } else {
                 e.printStackTrace();
             }
