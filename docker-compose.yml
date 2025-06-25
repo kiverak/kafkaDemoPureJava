@@ -39,7 +39,7 @@ services:
     image: apache/kafka:latest
     container_name: broker-1
     ports:
-      - 29092:9092
+      - "29092:9092"
     environment:
       KAFKA_NODE_ID: 4
       KAFKA_PROCESS_ROLES: broker
@@ -50,16 +50,6 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@controller-1:9093,2@controller-2:9093,3@controller-3:9093
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-    command: >
-      bash -c "
-        /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kraft/broker.properties &
-        sleep 15 &&
-        /opt/kafka/bin/kafka-topics.sh --create \
-          --topic my-topic \
-          --partitions 6 \
-          --replication-factor 2 \
-          --bootstrap-server localhost:19092
-      "
     depends_on:
       - controller-1
       - controller-2
@@ -69,7 +59,7 @@ services:
     image: apache/kafka:latest
     container_name: broker-2
     ports:
-      - 39092:9092
+      - "39092:9092"
     environment:
       KAFKA_NODE_ID: 5
       KAFKA_PROCESS_ROLES: broker
@@ -89,7 +79,7 @@ services:
     image: apache/kafka:latest
     container_name: broker-3
     ports:
-      - 49092:9092
+      - "49092:9092"
     environment:
       KAFKA_NODE_ID: 6
       KAFKA_PROCESS_ROLES: broker
