@@ -80,16 +80,25 @@ public class KafkaConsumerApplication {
         try (var consumer = new KafkaConsumer<String, String>(properties)) {
             consumer.subscribe(Pattern.compile("sandbox"));
 
-            while (true) {
+//            while (true) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
                 StreamSupport.stream(records.spliterator(), false)
                         .forEach(record -> {
-                                logger.info("Record: {}", record);
+                            logger.info("Record: {}", record);
 //                                consumer.commitSync(Map.of(new TopicPartition(record.topic(), record.partition()),
 //                                        new OffsetAndMetadata(record.offset() + 1)));
-                                consumer.commitSync();
+//                                consumer.commitSync();
+//                                consumer.commitAsync();
+                                consumer.commitAsync(
+                                        Map.of(
+                                                new TopicPartition(record.topic(), record.partition()),
+                                                new OffsetAndMetadata(record.offset() + 1)
+                                        ),
+                                        (offsets, exception) -> {
+                                            logger.info("Offsets: {}", offsets);
+                                        });
                         });
-            }
+//            }
         }
     }
 }
@@ -113,7 +122,7 @@ class MyConsumerRebalanceListener implements ConsumerRebalanceListener {
     public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
         logger.info("Partitions assigned: {}", partitions);
 
-        if(partitions.contains(new TopicPartition("sandbox", 1))){
+        if (partitions.contains(new TopicPartition("sandbox", 1))) {
             consumer.seek(new TopicPartition("sandbox", 1), new OffsetAndMetadata(5));
         }
     }
