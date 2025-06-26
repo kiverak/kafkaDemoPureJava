@@ -27,14 +27,14 @@ public class KafkaConsumerApplication {
         properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:29092,localhost:39092,localhost:49092");
         properties.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-//        properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, "my-group-id");
+//        properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, "my-group-id");
         // если не указать id инстанса группы, он будет генерироваться каждый раз
         // и будет происходить перебалансировка кластера
-//        properties.setProperty(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, "my-group-instance-id");
+        properties.setProperty(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, "my-group-instance-id");
 
-        getRecords(properties);
-//        getRecordsForGroup(properties);
+//        getRecords(properties);
+        getRecordsForGroup(properties);
     }
 
     private static void getRecords(Properties properties) {
@@ -63,7 +63,7 @@ public class KafkaConsumerApplication {
 
     private static void getRecordsForGroup(Properties properties) {
         try (var consumer = new KafkaConsumer<String, String>(properties)) {
-            consumer.subscribe(Pattern.compile("sandbox"), new MyConsumerRebalanceListener());
+            consumer.subscribe(Pattern.compile("sandbox"), new MyConsumerRebalanceListener(consumer));
 
             while (true) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
@@ -78,6 +78,12 @@ class MyConsumerRebalanceListener implements ConsumerRebalanceListener {
 
     private static final Logger logger = LoggerFactory.getLogger(MyConsumerRebalanceListener.class);
 
+    private final KafkaConsumer<String, String> consumer;
+
+    MyConsumerRebalanceListener(KafkaConsumer<String, String> consumer) {
+        this.consumer = consumer;
+    }
+
     @Override
     public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
         logger.info("Partitions revoked: {}", partitions);
@@ -86,5 +92,9 @@ class MyConsumerRebalanceListener implements ConsumerRebalanceListener {
     @Override
     public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
         logger.info("Partitions assigned: {}", partitions);
+
+        if(partitions.contains(new TopicPartition("sandbox", 1))){
+            consumer.seek(new TopicPartition("sandbox", 1), new OffsetAndMetadata(5));
+        }
     }
 }
